@@ -1,0 +1,5 @@
+I have the assignment to create a Holiday Chatbot, I have attached the requirements and have already created the chatbot, I just need you to repurpose into 'Holiday' style and make it meet its requirements. Currently, it cannot temporarily store the user's responses and give a recommendation.
+
+I understand, the chatbot itself has already been developed, you just need to make it temporarily store responses and give an answer based on data set
+
+Just a text response, so If I said I wanted to go somewhere warm and dry it would say Egypt for example
