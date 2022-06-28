@@ -1,0 +1,35 @@
+EA that:
+
+-Opens 2 trades at once. (One with take profit other without, but moves stoploss to breakeven once the first takes profit.)
+
+-Has dynamic stop loss and take profit based on ATR (take profit is 1x ATR, stoploss is 1.5x ATR, also if you can leave those numbers adjustible and not hard code them, that would be nice)
+
+-Risks 1-2% of an account per trade (also not hard code it)
+
+-Uses moving average, "Absolute Strengs HIstogram" and "Solar Wind" to determine a trade 
+
+      direction and exit. (indicators included, and their values not hard code)
+
+*for short trades: if price is bellow moving average and both indicators are red, enter the trade. Exit when one of the indicators changes color, or hits stoploss.
+
+*for long trades: if price is above moving average and both indicators are green, enter the 
+trade. Exit when one of the indicators changes color, or hits stoploss.
+
+*Reenters trade short: when short has been stopped out, looks at the candle where it exited 
+and next two, if any of them is a bearish candle enters a short trade. In reenters baseline 
+doesnt matter.
+
+*Reenters trade long: when long has been stopped out, looks at the candle where it exited 
+
+      and next two, if any of them is a bullish candle enters a long trade. In reenters baseline 
+
+      doesnt matter.
+
+
+
+If anythings is unclear please contact me. I have also added the indicators once again in the files and some screenshots showing how trades work. I would like to use it to trade japanese yen pairs, and gold/silver and also S&P500 indicies so please make it work for those too!
+
+I have also added an indicator that calculates stoploss and takeprofit values, maybe it help you to understand what I meant. (its called No_Nonsense_ATR)
+
+
+Again if anything is unclear, just contact me!

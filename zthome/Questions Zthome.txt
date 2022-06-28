@@ -1,0 +1,9 @@
+Summary of things that i dont know right now:
+	1. Opens 2 trades at once. (One with take profit other without, but moves stoploss to breakeven once the first takes profit.)
+	Please clarify the above point in more detail when to open two trades and how would i determine when to open buy trade or sell trade
+	2. Reenters trade long: when long has been stopped out, looks at the candle where it exited and next two, if any of them is a bullish candle enters a long 	trade. In reenters baseline doesnt matter.
+	Questions: What do you mean by the bullish candle here is it the  Absolute Strength History bullish value or the actual candle on the chart?? and second 	question what do you mean by to reenter baseline doesnt matter
+	3. Has dynamic stop loss and take profit based on ATR (take profit is 1x ATR, stoploss is 1.5x ATR, also if you can leave those numbers adjustible and not 		hard code them, that would be nice)
+	Like what i am currently doing is to provide an option to change the ATR Period in the EA so that the stopLoss and TakeProfit updaates according to the ATR 	values i.e 1.5 x ATR Value is equal to stopLoss
+
+Please clarify these as soon as possible
