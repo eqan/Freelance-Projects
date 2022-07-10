@@ -1,0 +1,352 @@
+//+------------------------------------------------------------------+
+//|                                                                  |
+//|                                     Copyright © 2022, Manan Hfz  |
+//|                                     https://fiverr.com/mananhfz  |
+//+------------------------------------------------------------------+
+/*
+   ✅ inputs
+   ✅ EMAs
+   ✅ 10 pips int
+   ✅ SL,TP = 0
+   ✅ Trailing stop
+   ✅ Profit $$ = 0.01 double
+   ✅ Loss $$ = 0.01 double
+   ✅ Lotsize = 0.01 double
+   ✅ Lot multiplier = 2 double
+*/
+#property copyright "Copyright © 2022, Manan Hfz"
+#property link      "https://fiverr.com/mananhfz"
+#property version   "1.00"
+#property strict
+enum settings
+  {
+   settings = 0,                                  //======= Settings =======
+  };
+struct TradeInfo
+  {
+   double            orderPrice;
+   int               orderType;
+  };
+input settings gs = 0;                                       // ===== General =====
+input double LotSize = 0.01;                                 // LotSize
+input int LotSizeMultipler = 2;                              // LotSizeMultiplier
+input double lotSizeLimit = 0.5;                             // LotSize Limit
+input int slippage = 5;                                      // Slippage
+input int magicNumber = 123;                                 // Magic Number
+input double totalProfitLimit = 0.01;                        // Total Profit Limit
+input double totalLossLimit = 0.01;                          // Total Loss Limit
+input double PipLimit = 10;                                  // Pip Limit
+
+input settings tss = 0;                                      // ===== Trailing Stop =====
+input int trailingStart = 200;                               // Trailing Start
+input int trailingStep = 150;                                // Trailing Stop
+
+input settings mas1 = 0;                                     // ===== EMA 1 Settings =====
+input ENUM_MA_METHOD maType1 = MODE_EMA;                     // EMA1 Method
+input int ma1_Period = 10;                                   // EMA1 Period
+
+input settings mas2 = 0;                                     // ===== EMA 2 Settings =====
+input ENUM_MA_METHOD maType2 = MODE_EMA;                     // EMA2 Method
+input int ma2_Period = 20;                                   // EMA2 Period
+
+datetime current;
+double pip = Point,stopLevel,lotSize;
+int totalBuy = 0,totalSell = 0,step;
+bool enableBuyTrade = false, enableSellTrade = false;
+bool allowTrailingStop = true;
+double takeProfit = 0, stopLoss = 0, pipLimit = 0;
+TradeInfo lastTradeInfo;
+
+
+//+------------------------------------------------------------------+
+//| Compute Necessary Elements Before Every Trade                    |
+//+------------------------------------------------------------------+
+void computeLotSize()
+  {
+   if(lotSize*LotSizeMultipler >= lotSizeLimit)
+      return;
+   lotSize = NormalizeDouble(lotSize *LotSizeMultipler,step);
+  }
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+  {
+//---
+   pip = pip * 10.0;
+   pipLimit *= pip;
+   stopLevel = MarketInfo(Symbol(),MODE_STOPLEVEL) * pip;
+   step = (MarketInfo(Symbol(),MODE_LOTSTEP) == 0.1) + 2 * (MarketInfo(Symbol(),MODE_LOTSTEP) == 0.01);
+   lotSize = NormalizeDouble(LotSize,step);
+   if(lotSize != LotSize)
+     {
+      lotSize = lotSize == 0 ? MarketInfo(Symbol(),MODE_MINLOT) : lotSize;
+      Print("Wrong Volume " + DoubleToString(LotSize,2) + " for Pair " + Symbol() + ".It should be round off to " + (string)step + " decimal places like " + DoubleToString(lotSize,step));
+      Alert("Wrong Volume " + DoubleToString(LotSize,2) + " for Pair " + Symbol() + ".It should be round off to " + (string)step + " decimal places like " + DoubleToString(lotSize,step));
+     }
+//---
+   return(INIT_SUCCEEDED);
+  }
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+  {
+//---
+
+  }
+//+------------------------------------------------------------------+
+//| Expert tick function                                             |
+//+------------------------------------------------------------------+
+void OnTick()
+  {
+//---
+   ordersTotal();
+   if(current != Time[0])
+     {
+      current = Time[0];
+      order();
+     }
+   if(allowTrailingStop)
+      trailingStop();
+  }
+//+------------------------------------------------------------------+
+//| Calculate Total Profit And Loss                                  |
+//+------------------------------------------------------------------+
+void calculateTotalProfitAndLossOfAllTrades(double &profit, double &loss)
+  {
+   for(int pos = OrdersTotal()-1; pos >= 0; pos--)
+      if(OrderSelect(pos, SELECT_BY_POS) && OrderType() < 2 && OrderSymbol() == _Symbol && OrderMagicNumber() == magicNumber)
+         if(OrderProfit() > 0)
+            profit += OrderProfit() + OrderSwap() + OrderCommission();
+         else
+            if(OrderProfit() < 0)
+               loss += OrderProfit() + OrderSwap() + OrderCommission();
+  }
+
+//+------------------------------------------------------------------+
+//| Function to count total Buy, Sell Orders                         |
+//+------------------------------------------------------------------+
+void setLastTradeInfo()
+  {
+   for(int i = OrdersTotal() - 1; i >= 0; --i) // Cycle searching in orders
+     {
+      if(OrderSelect(i,SELECT_BY_POS) == true)
+        {
+         if(OrderSymbol() == Symbol() && OrderMagicNumber() == magicNumber)
+           {
+            if(OrderType() == OP_BUY || OrderType() == OP_SELL)
+              {
+               lastTradeInfo.orderPrice = OrderOpenPrice();
+               lastTradeInfo.orderType = OrderType();
+               return;
+              }
+           }
+        }
+     }
+   lastTradeInfo.orderType = -1;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void continuousTrade()
+  {
+   setLastTradeInfo();
+   if(lastTradeInfo.orderType != -1)
+     {
+      double buyingPrice = NormalizeDouble((Ask - lastTradeInfo.orderPrice), Digits);
+      double sellingPrice = NormalizeDouble((lastTradeInfo.orderPrice - Bid), Digits);
+      //Print("Buying Price: ", buyingPrice);
+      //Print("Selling Price: ", sellingPrice);
+      //Print("Pip Limit: ", pipLimit);
+      if(buyingPrice >= pipLimit)
+        {
+         orderBuy();
+        }
+      else
+         if(sellingPrice >= pipLimit)
+           {
+            orderSell();
+           }
+     }
+//Print("Last Trade Info: ", lastTradeInfo.orderPrice);
+//Print("Last Trade Type: ", lastTradeInfo.orderType);
+
+  }
+//+------------------------------------------------------------------+
+//| Function to Check if the Conditions for the Order has met        |
+//+------------------------------------------------------------------+
+void order()
+  {
+   continuousTrade();
+   double previousTradesProfit = 0, previousTradesLoss = 0;
+   calculateTotalProfitAndLossOfAllTrades(previousTradesProfit, previousTradesLoss);
+   if(previousTradesProfit >= totalProfitLimit || previousTradesLoss <= totalLossLimit)
+     {
+      orderCloseBuy("Buy Orders Closed On Trade Profit");
+      orderCloseSell("Sell Orders Closed On Trade Profit");
+     }
+   double ma1_1 = iMA(NULL, 0, ma1_Period,0, maType1, PRICE_CLOSE, 0);
+   double ma2_1 = iMA(NULL, 0, ma2_Period,0, maType2, PRICE_CLOSE, 0);
+   if(ma1_1 < ma2_1)
+     {
+      orderBuy();
+     }
+   if(ma1_1 > ma2_1)
+     {
+      orderSell();
+     }
+  }
+//+------------------------------------------------------------------------+
+//| Function to return True if the double has some value, false otherwise  |
+//+------------------------------------------------------------------------+
+bool hasValue(double val)
+  {
+   return (val && val != EMPTY_VALUE);
+  }
+//+------------------------------------------------------------------+
+//| Function to place Buy orders                                     |
+//+------------------------------------------------------------------+
+void orderBuy()
+  {
+   RefreshRates();
+   computeLotSize();
+   double sl = (stopLoss == 0) ? 0 : NormalizeDouble(Ask - stopLoss * pip, Digits);
+   double tp = (takeProfit == 0) ? 0 : NormalizeDouble(Ask + takeProfit * pip, Digits);
+   int retries = 10;
+   while(retries >= 0)
+     {
+      Print(lotSize);
+      if(OrderSend(Symbol(),OP_BUY,lotSize,Ask,slippage,sl,tp,"",magicNumber,0,clrBlue) < 0)
+        {
+         Print("Buy Order failed with error #",GetLastError());
+         if(tp != 0 && tp - Bid < stopLevel)
+            Print("Wrong Takeprofit " + DoubleToString(tp,Digits) + ", TP should be at " + DoubleToString(Ask + stopLevel,Digits) + " or above");
+         if(sl != 0 && Bid - sl < stopLevel)
+            Print("Wrong Stoploss " + DoubleToString(sl,Digits) + ", SL should be at " + DoubleToString(Bid - stopLevel,Digits) + " or below");
+         if(retries - 1 >= 0)
+            Sleep(1000);
+        }
+      else
+        {
+         Print("Buy Order placed successfully");
+         break;
+        }
+      --retries;
+     }//End While
+  }
+//+------------------------------------------------------------------+
+//| Function to place Sell Orders                                    |
+//+------------------------------------------------------------------+
+void orderSell()
+  {
+   RefreshRates();
+   computeLotSize();
+   double sl = (stopLoss == 0) ? 0 : NormalizeDouble(Bid + stopLoss * pip, Digits);
+   double tp = (takeProfit == 0) ? 0 : NormalizeDouble(Bid - takeProfit * pip, Digits);
+   int retries = 3;
+   while(retries >= 0)
+     {
+      Print(lotSize);
+      if(OrderSend(Symbol(),OP_SELL,lotSize,Bid,slippage,sl,tp,"",magicNumber,0,clrRed) < 0)
+        {
+         Print("Sell Order failed with error #",GetLastError());
+         if(tp != 0 && Ask - tp < stopLevel)
+            Print("Wrong Takeprofit " + DoubleToString(tp,Digits) + ", TP should be at " + DoubleToString(Bid - stopLevel,Digits) + " or below");
+         if(sl != 0 && sl - Ask < stopLevel)
+            Print("Wrong Stoploss " + DoubleToString(sl,Digits) + ", SL should be at " + DoubleToString(Ask + stopLevel,Digits) + " or above");
+         if(retries - 1 >= 0)
+            Sleep(1000);
+        }
+      else
+        {
+         Print("Sell Order placed successfully");
+         break;
+        }
+      --retries;
+     }//End While
+  }
+
+//+------------------------------------------------------------------+
+//| Function to count total Buy, Sell Orders                         |
+//+------------------------------------------------------------------+
+void ordersTotal()
+  {
+   totalBuy = totalSell = 0;
+   for(int i = OrdersTotal() - 1; i >= 0; --i) // Cycle searching in orders
+     {
+      if(OrderSelect(i,SELECT_BY_POS) == true)
+        {
+         if(OrderSymbol() == Symbol() && OrderMagicNumber() == magicNumber)
+           {
+            if(OrderType() == OP_BUY)
+               ++totalBuy;
+            if(OrderType() == OP_SELL)
+               ++totalSell;
+           }
+        }
+     }
+  }
+//+------------------------------------------------------------------+
+//| Function to close buy orders                                     |
+//+------------------------------------------------------------------+
+void orderCloseBuy(string com)
+  {
+   for(int i = OrdersTotal() - 1; i >= 0; --i) // Cycle searching in orders
+     {
+      if(OrderSelect(i,SELECT_BY_POS) == true)
+        {
+         if(OrderSymbol() == Symbol() && OrderMagicNumber() == magicNumber && OrderType() == OP_BUY)
+           {
+            if(OrderClose(OrderTicket(),OrderLots(),Bid,slippage,clrCyan) == true)
+               Print("Buy Order closed on " + com);
+           }
+        }
+     }
+  }
+//+------------------------------------------------------------------+
+//| Function to close sell orders                                    |
+//+------------------------------------------------------------------+
+void orderCloseSell(string com)
+  {
+   for(int i = OrdersTotal() - 1; i >= 0; --i) // Cycle searching in orders
+     {
+      if(OrderSelect(i,SELECT_BY_POS) == true)
+        {
+         if(OrderSymbol() == Symbol() && OrderMagicNumber() == magicNumber && OrderType() == OP_SELL)
+           {
+            if(OrderClose(OrderTicket(),OrderLots(),Ask,slippage,clrCyan) == true)
+               Print("Sell Order closed on " + com);
+           }
+        }
+     }
+  }
+//+------------------------------------------------------------------+
+//| Trailing Stop Function                                           |
+//+------------------------------------------------------------------+
+void trailingStop()
+  {
+   for(int i = OrdersTotal() -1; i >= 0; --i)
+     {
+      if(OrderSelect(i, SELECT_BY_POS) && OrderSymbol() == Symbol())
+        {
+         if(OrderType() == OP_BUY &&  Bid - OrderOpenPrice() >= trailingStart * pip && OrderStopLoss() < Bid - trailingStep* pip)
+           {
+            if(OrderModify(OrderTicket(), OrderOpenPrice(), NormalizeDouble(Bid - trailingStep * pip, Digits), OrderTakeProfit(), 0))
+               Print("Modified buy by trailing stop");
+            else
+               Print("Not Modified buy by trailing stop");
+           }
+         else
+            if(OrderType() == OP_SELL && OrderOpenPrice() - Ask >= trailingStart * pip && (OrderStopLoss() > Ask + trailingStep * pip || OrderStopLoss() == 0))
+              {
+               if(OrderModify(OrderTicket(), OrderOpenPrice(), NormalizeDouble(Ask + trailingStep * pip, Digits), OrderTakeProfit(), 0))
+                  Print("Modified sell by trailing stop");
+               else
+                  Print("Not Modified sell by trailing stop");
+              }
+        }
+     }
+  }
+//+------------------------------------------------------------------+

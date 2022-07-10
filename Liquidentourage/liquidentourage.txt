@@ -1,0 +1,207 @@
+//+------------------------------------------------------------------+
+//|                                                                  |
+//|                                     Copyright © 2022, ManaHfz    |
+//|                                     https://fiverr.com/manahfz   |
+//+------------------------------------------------------------------+
+#property copyright "Copyright © 2022, MananHfz"
+#property link      "https://fiverr.com/manahfz"
+#property version   "1.00"
+#property strict
+enum settings
+  {
+   settings = 0,                                  //======= Settings =======
+  };
+input settings gs = 0;                                        // ===== General =====
+input double LotSize = 0.01;                                  // LotSize
+input int slippage = 5;                                       // Slippage
+input int magicNumber = 123;                                  // Magic Number
+input double takeProfit = 20;                                 // Take Profit (Pips)
+input double stopLoss = 30;                                   // Stop Loss (Pips)
+input double amplitude = 2;                                   // PZLopezTrend Amplitude
+
+datetime current;
+double pip = Point,stopLevel,lotSize;
+int totalBuy = 0,totalSell = 0,step;
+string dir="liquidentourage//";
+
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+  {
+//---
+   pip = pip * 10.0;
+   stopLevel = MarketInfo(Symbol(),MODE_STOPLEVEL) * pip;
+   step = (MarketInfo(Symbol(),MODE_LOTSTEP) == 0.1) + 2 * (MarketInfo(Symbol(),MODE_LOTSTEP) == 0.01);
+   lotSize = NormalizeDouble(LotSize,step);
+   if(lotSize != LotSize)
+     {
+      lotSize = lotSize == 0 ? MarketInfo(Symbol(),MODE_MINLOT) : lotSize;
+      Print("Wrong Volume " + DoubleToString(LotSize,2) + " for Pair " + Symbol() + ".It should be round off to " + (string)step + " decimal places like " + DoubleToString(lotSize,step));
+      Alert("Wrong Volume " + DoubleToString(LotSize,2) + " for Pair " + Symbol() + ".It should be round off to " + (string)step + " decimal places like " + DoubleToString(lotSize,step));
+     }
+//---
+   return(INIT_SUCCEEDED);
+  }
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+  {
+//---
+
+  }
+//+------------------------------------------------------------------+
+//| Expert tick function                                             |
+//+------------------------------------------------------------------+
+void OnTick()
+  {
+//---
+   ordersTotal();
+   if(current != Time[0])
+     {
+      current = Time[0];
+      order();
+     }
+  }
+//+------------------------------------------------------------------+
+//| Function to Check if the Conditions for the Order has met        |
+//+------------------------------------------------------------------+
+void order()
+  {
+   double blueTrend_1 = iCustom(Symbol(), 0,dir + "PZLopezTrend","", amplitude, "", "", false, false, false, false, "" ,4, 1);
+   double blueTrend_2 = iCustom(Symbol(), 0,dir + "PZLopezTrend","", amplitude, "", "", false, false, false, false, "" ,4, 2);
+   double orangeTrend_1 = iCustom(Symbol(), 0,dir + "PZLopezTrend","", amplitude, "", "", false, false, false, false, "" ,5, 1);
+   double orangeTrend_2 = iCustom(Symbol(), 0,dir + "PZLopezTrend","", amplitude, "", "", false, false, false, false, "" ,5, 2);
+   if(hasValue(orangeTrend_1) && hasValue(blueTrend_2))
+   {
+      orderCloseBuy("");
+      orderSell();
+   }
+   else if(hasValue(blueTrend_1) && hasValue(orangeTrend_2))
+   {
+      orderCloseSell("");
+      orderBuy();
+      
+   }
+   
+  }
+//+------------------------------------------------------------------------+
+//| Function to return True if the double has some value, false otherwise  |
+//+------------------------------------------------------------------------+
+bool hasValue(double val)
+  {
+   return (val && val != EMPTY_VALUE);
+  }
+//+------------------------------------------------------------------+
+//| Function to place Buy orders                                     |
+//+------------------------------------------------------------------+
+void orderBuy()
+  {
+   double sl = (stopLoss == 0) ? 0 : NormalizeDouble(Ask - stopLoss * pip, Digits);
+   double tp = (takeProfit == 0) ? 0 : NormalizeDouble(Ask + takeProfit * pip, Digits);
+
+   int retries = 10;
+   while(retries >= 0)
+     {
+      if(OrderSend(Symbol(),OP_BUY,lotSize,Ask,slippage,sl,tp,"",magicNumber,0,clrBlue) < 0)
+        {
+         Print("Buy Order failed with error #",GetLastError());
+         if(tp != 0 && tp - Bid < stopLevel)
+            Print("Wrong Takeprofit " + DoubleToString(tp,Digits) + ", TP should be at " + DoubleToString(Ask + stopLevel,Digits) + " or above");
+         if(sl != 0 && Bid - sl < stopLevel)
+            Print("Wrong Stoploss " + DoubleToString(sl,Digits) + ", SL should be at " + DoubleToString(Bid - stopLevel,Digits) + " or below");
+         if(retries - 1 >= 0)
+            Sleep(1000);
+        }
+      else
+        {
+         Print("Buy Order placed successfully");
+         break;
+        }
+      --retries;
+     }//End While
+  }
+//+------------------------------------------------------------------+
+//| Function to place Sell Orders                                    |
+//+------------------------------------------------------------------+
+void orderSell()
+  {
+   double sl = (stopLoss == 0) ? 0 : NormalizeDouble(Bid + stopLoss * pip, Digits);
+   double tp = (takeProfit == 0) ? 0 : NormalizeDouble(Bid - takeProfit * pip, Digits);
+
+   int retries = 3;
+   while(retries >= 0)
+     {
+      if(OrderSend(Symbol(),OP_SELL,lotSize,Bid,slippage,sl,tp,"",magicNumber,0,clrRed) < 0)
+        {
+         Print("Sell Order failed with error #",GetLastError());
+         if(tp != 0 && Ask - tp < stopLevel)
+            Print("Wrong Takeprofit " + DoubleToString(tp,Digits) + ", TP should be at " + DoubleToString(Bid - stopLevel,Digits) + " or below");
+         if(sl != 0 && sl - Ask < stopLevel)
+            Print("Wrong Stoploss " + DoubleToString(sl,Digits) + ", SL should be at " + DoubleToString(Ask + stopLevel,Digits) + " or above");
+         if(retries - 1 >= 0)
+            Sleep(1000);
+        }
+      else
+        {
+         Print("Sell Order placed successfully");
+         break;
+        }
+      --retries;
+     }//End While
+  }
+//+------------------------------------------------------------------+
+//| Function to count total Buy, Sell Orders                         |
+//+------------------------------------------------------------------+
+void ordersTotal()
+  {
+   totalBuy = totalSell = 0;
+   for(int i = OrdersTotal() - 1; i >= 0; --i) // Cycle searching in orders
+     {
+      if(OrderSelect(i,SELECT_BY_POS) == true)
+        {
+         if(OrderSymbol() == Symbol() && OrderMagicNumber() == magicNumber)
+           {
+            if(OrderType() == OP_BUY)
+               ++totalBuy;
+            if(OrderType() == OP_SELL)
+               ++totalSell;
+           }
+        }
+     }
+  }
+//+------------------------------------------------------------------+
+//| Function to close buy orders                                     |
+//+------------------------------------------------------------------+
+void orderCloseBuy(string com)
+  {
+   for(int i = OrdersTotal() - 1; i >= 0; --i) // Cycle searching in orders
+     {
+      if(OrderSelect(i,SELECT_BY_POS) == true)
+        {
+         if(OrderSymbol() == Symbol() && OrderMagicNumber() == magicNumber && OrderType() == OP_BUY)
+           {
+            if(OrderClose(OrderTicket(),OrderLots(),Bid,slippage,clrCyan) == true)
+               Print("Buy Order closed on " + com);
+           }
+        }
+     }
+  }
+//+------------------------------------------------------------------+
+//| Function to close sell orders                                    |
+//+------------------------------------------------------------------+
+void orderCloseSell(string com)
+  {
+   for(int i = OrdersTotal() - 1; i >= 0; --i) // Cycle searching in orders
+     {
+      if(OrderSelect(i,SELECT_BY_POS) == true)
+        {
+         if(OrderSymbol() == Symbol() && OrderMagicNumber() == magicNumber && OrderType() == OP_SELL)
+           {
+            if(OrderClose(OrderTicket(),OrderLots(),Ask,slippage,clrCyan) == true)
+               Print("Sell Order closed on " + com);
+           }
+        }
+     }
+  }

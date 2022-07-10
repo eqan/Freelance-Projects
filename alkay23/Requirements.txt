@@ -1,0 +1,9 @@
+I'm looking for a very basic ea that compares sma to wma with input available for each period.
+Other inputs needed are lot size, MaxT open trades, trading hours. TP, SL, and TSL with option to turn off ( if it =0)
+
+Logic- buy/ sell when WMA crosses SMA.
+Close the buy/sell position when it crosses again
+
+option to add multiple timeframes-- only enter position if 15min, 60min and 420min candles align
+
+I will also need the source code.

@@ -1,0 +1,5 @@
+Sorry for missing some of these messages.
+
+TSL does mean trailing stop
+
+Option to turn off- please enable a way that I can "turn off" any of the inputs. For example- if I set stop loss to 0 then the EA does not ever look for a top loss. Or if I only want to use the 15 min and 60min candles but not the other ones, then a way to "turn off" the other timeframes and only focus on these 2
