@@ -1,0 +1,54 @@
+Requirements.
+
+Expand current script to:
+
+Close Tabs to help limit Chrome Crashes
+
+Move from spreadsheet to DB table
+1. Create two word list tables
+
+I. Prefix/ Suffix list
+i. Prefix/ Suffix Word (Primary Key)
+ii. InsertedDate
+
+II. Root Word List
+i. Root Word
+ii. InsertedDate
+
+2. Create Top Level Domain Search Status
+I. Top Level Domain Name
+i. This be a concat of the two word lists
+A. Prefix/ Suffix Word + Root Word
+B Root Word + Prefix/ Suffix Word
+II. Status
+i. Auction Ended - Winner You
+ii. Auction Ended - Winner Other
+iii. Bid Placed and Confirmed
+iv. Bid not placed! Lockout above 0.44 HNS
+v. Auction Status - Auction start in progress
+vi. Auction Status - Started X Days Remaining
+vii. TLD Listed
+viii. TLD Sold
+ix. Not Searched (initial default status)
+III. Highest Lockout (Sold for x HSN) or (Highest lockup: xHNS)
+IV. Winner
+i. You
+ii. Other
+V. Sold Price - Sale History Highest Price
+VI. Inserted Date
+
+Top Level Domain Search
+Any item in the database with status ‘Not Searched’ will be loaded for search.
+
+List Top Level Domains
+
+For each Top Level Domain with Status ‘Auction Ended - Winner You’
+Set Status to TLD Listed
+(List on the market for sale at X HNS
+Delist from the market
+List on the market for sale at X HNS - 1 HNS
+Delist from the market
+List on the market for sale for X HNS + 1 HNS
+) X + 1
+UNTIL TLD SOLD
+Set ‘V. Sold Price - Sale History Highest Price’ to highest Price in Sale History

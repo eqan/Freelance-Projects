@@ -1,0 +1,15 @@
+So heres my idea,
+Phase I:
+The program will first check if there is a master file or not
+This means that if there is a master file already there no need to do the cumbersome project of making a new one
+If not the use the prefix/suffix files to generate a master file
+
+Phase II:
+After the master file phase we start scanning the file and start searching, we delete the names one by one
+which are searched and copying them in 3rd file that will contain the log of the searched items so that we have
+a history of the searched items and if the program crashes the umsearched TLDs would be left behind
+
+Files:
+1. Prefix/suffix: for different combinations
+2. Master TLD search: will contain the combinations of domains and the items that are to be searched
+3. History/log: History of all the searched items

@@ -1,6 +1,7 @@
 import time
 import os
 import pandas as pd
+import openpyxl
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -32,7 +33,11 @@ def convert_all_xlsx_to_onefile():
 	df.to_excel(fileName)
 
 print("Importing your data!..")
-convert_all_xlsx_to_onefile()
+
+print("Remove the 'book.xlsx' file to recompute the whole list")
+if not os.path.exists(logFileName):
+    convert_all_xlsx_to_onefile()
+
 df = pd.read_excel(fileName, sheet_name='Sheet1', usecols="B")
 domainNames = list(df[columnName])
 bid = 0
@@ -49,8 +54,6 @@ s = Service('./chromedriver')
 driver = webdriver.Chrome(service=s)
 driver.maximize_window()
 
-if os.path.exists(logFileName):
-    os.remove(logFileName)
 
 df = pd.DataFrame()
 driver.execute_script("window.open()")
@@ -82,6 +85,8 @@ print(domainNames)
 z = 0
 
 for domainName in domainNames:
+    bookWB = openpyxl.load_workbook("./book.xlsx")
+    bookSheet = bookWB.active
     df = df.append([domainName], ignore_index=True) 
     print(f'Processing for domain {domainName}')
     time.sleep(2)
@@ -138,6 +143,10 @@ for domainName in domainNames:
             print(error)
             df.append(["Bid not Confirmed!"], ignore_index=True) 
             print('Bid not Confirmed!')  
+
+    bookSheet.delete_rows(bookSheet.min_row + 1, 1)
+    bookWB.save("./book.xlsx")
+
     z+=1
     driver.execute_script("window.open()")
     driver.switch_to.window(driver.window_handles[z+1])
