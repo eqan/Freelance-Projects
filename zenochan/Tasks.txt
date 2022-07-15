@@ -1,0 +1,8 @@
+I @will do the following tasks:
+
+Subtitles extraction using API
+Punctuation correction
+Paragraphing the subtitles
+Rechecking if everything is fine
+Efficient and fast program
+Documentation
