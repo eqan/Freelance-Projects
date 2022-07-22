@@ -1,0 +1,5 @@
+List of thing included in the project:
+1. A GUI application made with PYQT5 natively supported.
+2. A bot that opens the browser and facebook and sends messages to the users with delayed time using selenium that uses the browser directly or other python libraries.
+
+Hey! I need a bot that send message to all my friends in the FC chat. Can you do it or has it ready to sell to me? With be possible setup delay time btw each sent message to diferent friends. example: send a message to friend A and setup manualy delay in 30 seconds to send the message to the next friend..
