@@ -106,6 +106,10 @@ class InitialWindow(QDialog):
             except:
                 print(f'Couldnt find an href{friendsListBeforeScrolling[i]}')
 
+        # Removing duplicates if any
+        friendsNamesList = list(set(friendsNamesList)) 
+        print(friendsNamesList)
+
         self.updateText.setText("....Sending Message To Friends....")
         for userName in friendsNamesList:
             self.updateText.setText(f'Sending Message to {userName}')

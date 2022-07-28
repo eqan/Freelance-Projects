@@ -51,7 +51,10 @@ print(email)
 print(password)
 
 s = Service('./chromedriver')
-driver = webdriver.Chrome(service=s)
+prefs = {"profile.default_content_setting_values.notifications" : 2}
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_experimental_option("prefs",prefs)
+driver = webdriver.Chrome(chrome_options=chrome_options,service=s)
 driver.maximize_window()
 
 
